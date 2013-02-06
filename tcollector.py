@@ -22,14 +22,14 @@
 
 import atexit
 import errno
-import fcntl
+#import fcntl
 import logging
 import os
 import random
 import re
 import signal
 import socket
-import subprocess
+import subprocess2
 import sys
 import threading
 import time
@@ -127,7 +127,7 @@ class Collector(object):
         # now read stderr for log messages, we could buffer here but since
         # we're just logging the messages, I don't care to
         try:
-            out = self.proc.stderr.read()
+            out = self.proc.recv_err()
             if out:
                 LOG.debug('reading %s got %d bytes on stderr',
                           self.name, len(out))
@@ -143,7 +143,7 @@ class Collector(object):
         # out a bunch of data points at one time and we get some weird sized
         # chunk.  This read call is non-blocking.
         try:
-            self.buffer += self.proc.stdout.read()
+            self.buffer += self.proc.recv()
             if len(self.buffer):
                 LOG.debug('reading %s, buffer now %d bytes',
                           self.name, len(self.buffer))
@@ -1010,10 +1010,10 @@ def reap_children():
                                          col.mtime, col.lastspawn))
 
 
-def set_nonblocking(fd):
-    """Sets the given file descriptor to non-blocking mode."""
-    fl = fcntl.fcntl(fd, fcntl.F_GETFL) | os.O_NONBLOCK
-    fcntl.fcntl(fd, fcntl.F_SETFL, fl)
+#def set_nonblocking(fd):
+#    """Sets the given file descriptor to non-blocking mode."""
+#    fl = fcntl.fcntl(fd, fcntl.F_GETFL) | os.O_NONBLOCK
+#    fcntl.fcntl(fd, fcntl.F_SETFL, fl)
 
 
 def spawn_collector(col):
@@ -1025,8 +1025,8 @@ def spawn_collector(col):
     # if re.search('\.py$', col.name) is not None:
     #     ... load the py module directly instead of using a subprocess ...
     try:
-        col.proc = subprocess.Popen(col.filename, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE)
+        col.proc = subprocess2.Popen([r"C:\Python27\python.exe", col.filename], stdout=subprocess2.PIPE,
+                                stderr=subprocess2.PIPE)
     except OSError, e:
         LOG.error('Failed to spawn collector %s: %s' % (col.filename, e))
         return
@@ -1034,8 +1034,8 @@ def spawn_collector(col):
     # other logic and it makes no sense to update the last spawn time if the
     # collector didn't actually start.
     col.lastspawn = int(time.time())
-    set_nonblocking(col.proc.stdout.fileno())
-    set_nonblocking(col.proc.stderr.fileno())
+#    set_nonblocking(col.proc.stdout.fileno())
+#    set_nonblocking(col.proc.stderr.fileno())
     if col.proc.pid > 0:
         col.dead = False
         LOG.info('spawned %s (pid=%d)', col.name, col.proc.pid)
